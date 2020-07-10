@@ -52,29 +52,27 @@ public class RecipeServiceImpl implements RecipeService {
     }
 
     @Override
-    @Transactional
-    public RecipeCommand findCommandById(String id) {
+    public Mono<RecipeCommand> findCommandById(String id) {
 
-        RecipeCommand recipeCommand = recipeToRecipeCommand.convert(findById(id).block());
-
-        //enhance command object with id value
-        if(recipeCommand.getIngredients() != null && recipeCommand.getIngredients().size() > 0){
-            recipeCommand.getIngredients().forEach(rc -> {
-                rc.setRecipeId(recipeCommand.getId());
-            });
-        }
-
-        return recipeCommand;
+        return recipeRepository.findById(id)
+                .map(recipe -> {
+                    RecipeCommand recipeCommand = recipeToRecipeCommand.convert(recipe);
+                    recipeCommand.getIngredients().forEach(rc -> {
+                        rc.setRecipeId(recipeCommand.getId());
+                    });
+                    return recipeCommand;
+                });
     }
 
     @Override
-    @Transactional
-    public RecipeCommand saveRecipeCommand(RecipeCommand command) {
-        Recipe detachedRecipe = recipeCommandToRecipe.convert(command);
+    public Mono<RecipeCommand> saveRecipeCommand(RecipeCommand command) {
 
-        Mono<Recipe> savedRecipe = recipeRepository.save(detachedRecipe);
-        log.debug("Saved RecipeId:" + savedRecipe.block().getId());
-        return recipeToRecipeCommand.convert(savedRecipe.block());
+        return recipeRepository.save(recipeCommandToRecipe.convert(command)).map(recipeToRecipeCommand::convert);
+//        Recipe detachedRecipe = recipeCommandToRecipe.convert(command);
+//
+//        Mono<Recipe> savedRecipe = recipeRepository.save(detachedRecipe);
+//        log.debug("Saved RecipeId:" + savedRecipe.block().getId());
+//        return recipeToRecipeCommand.convert(savedRecipe.block());
     }
 
     @Override
